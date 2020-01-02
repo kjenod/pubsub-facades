@@ -31,7 +31,7 @@ Details on EUROCONTROL: http://www.eurocontrol.int
 __author__ = "EUROCONTROL (SWIM)"
 
 from collections import Callable
-from typing import Optional, List
+from typing import Optional, List, Any
 
 from subscription_manager_client.subscription_manager import SubscriptionManagerClient
 from subscription_manager_client.models import Topic, Subscription
@@ -70,12 +70,13 @@ class SWIMPublisher(PubSubFacade):
         return topic
 
     @PubSubFacade.require_running
-    def publish_topic(self, topic_name: str):
+    def publish_topic(self, topic_name: str, context: Optional[Any] = None):
         """
 
+        :param context:
         :param topic_name:
         """
-        self.container.producer.trigger_message_producer(message_producer_id=topic_name)
+        self.container.producer.trigger_message_producer(message_producer_id=topic_name, context=context)
 
 
 class SWIMSubscriber(PubSubFacade):
