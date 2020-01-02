@@ -35,20 +35,14 @@ from typing import Optional, List
 
 from subscription_manager_client.subscription_manager import SubscriptionManagerClient
 from subscription_manager_client.models import Topic, Subscription
-from swim_proton.containers import PubSubContainer
-from swim_proton.messaging_handlers import Producer, Consumer
+from swim_proton.containers import ProducerContainer, ConsumerContainer
 
 from pubsub_facades.base import PubSubFacade
 
 
 class SWIMPublisher(PubSubFacade):
-    messaging_handler_class = Producer
+    container_class = ProducerContainer
     sm_api_client_class = SubscriptionManagerClient
-
-    def __init__(self, container: PubSubContainer, sm_api_client):
-        PubSubFacade.__init__(self, container, sm_api_client)
-
-        self.producer: Producer = self._container.messaging_handler
 
     def _get_or_create_sm_topic(self, topic_name: str) -> Topic:
         topics = self.sm_api_client.get_topics()
@@ -61,29 +55,41 @@ class SWIMPublisher(PubSubFacade):
         return result
 
     def add_topic(self, topic_name: str, message_producer: Callable, interval_in_sec: Optional[int] = None) -> Topic:
+        """
+
+        :param topic_name:
+        :param message_producer:
+        :param interval_in_sec:
+        :return:
+        """
         topic = self._get_or_create_sm_topic(topic_name)
 
-        self.producer.add_message_producer(name=topic_name,
-                                           message_producer=message_producer,
-                                           interval_in_sec=interval_in_sec)
+        self.container.producer.add_message_producer(id=topic_name,
+                                                     message_producer=message_producer,
+                                                     interval_in_sec=interval_in_sec)
         return topic
 
     @PubSubFacade.require_running
     def publish_topic(self, topic_name: str):
-        self.producer.trigger_message(topic_name)
+        """
+
+        :param topic_name:
+        """
+        self.container.producer.trigger_message_producer(message_producer_id=topic_name)
 
 
 class SWIMSubscriber(PubSubFacade):
-    messaging_handler_class = Consumer
+    container_class = ConsumerContainer
     sm_api_client_class = SubscriptionManagerClient
-
-    def __init__(self, container: PubSubContainer, sm_api_client: SubscriptionManagerClient):
-        PubSubFacade.__init__(self, container, sm_api_client)
-
-        self.consumer: Consumer = self._container.messaging_handler
 
     @PubSubFacade.require_running
     def subscribe(self, topic_name: str, message_consumer: Callable) -> Subscription:
+        """
+
+        :param topic_name:
+        :param message_consumer:
+        :return:
+        """
         topics: List[Topic] = self.sm_api_client.get_topics()
 
         try:
@@ -93,12 +99,17 @@ class SWIMSubscriber(PubSubFacade):
 
         subscription = self.sm_api_client.post_subscription(subscription=Subscription(topic_id=topic.id))
 
-        self.consumer.attach_message_consumer(subscription.queue, message_consumer)
+        self.container.consumer.attach_message_consumer(subscription.queue, message_consumer)
 
         return subscription
 
     @PubSubFacade.require_running
     def pause(self, subscription: Subscription) -> Subscription:
+        """
+
+        :param subscription:
+        :return:
+        """
         subscription.active = False
         self.sm_api_client.put_subscription(subscription.id, subscription)
 
@@ -106,6 +117,11 @@ class SWIMSubscriber(PubSubFacade):
 
     @PubSubFacade.require_running
     def resume(self, subscription: Subscription) -> Subscription:
+        """
+
+        :param subscription:
+        :return:
+        """
         subscription.active = True
         self.sm_api_client.put_subscription(subscription.id, subscription)
 
@@ -113,6 +129,10 @@ class SWIMSubscriber(PubSubFacade):
 
     @PubSubFacade.require_running
     def unsubscribe(self, subscription: Subscription) -> None:
+        """
+
+        :param subscription:
+        """
         self.sm_api_client.delete_subscription_by_id(subscription.id)
 
-        self.consumer.detach_message_consumer(subscription.queue)
+        self.container.consumer.detach_message_consumer(subscription.queue)

@@ -77,18 +77,18 @@ def create_sm_api_client_from_config(config: ConfigDict, sm_api_client_class):
 
 
 class PubSubFacade:
-    messaging_handler_class = None
+    container_class = None
     sm_api_client_class = None
 
     def __init__(self, container: PubSubContainer, sm_api_client):
-        self._container = container
+        self.container = container
         self.sm_api_client = sm_api_client
 
         if not sm_client_api_is_authenticated(self.sm_api_client):
             raise ValueError("Invalid credentials")
 
-    def start(self, threaded=False):
-        self._container.run(threaded=threaded)
+    def run(self, threaded=False):
+        self.container.run(threaded=threaded)
 
     @classmethod
     def require_running(cls, f):
@@ -104,8 +104,7 @@ class PubSubFacade:
     def create_from_config(cls, config_file: str):
         config = yaml_file_to_dict(config_file)
 
-        messaging_handler = cls.messaging_handler_class.create_from_config(config['BROKER'])
-        container = PubSubContainer(messaging_handler)
+        container = cls.container_class.create_from_config(config['BROKER'])
 
         sm_api_client = create_sm_api_client_from_config(config['SUBSCRIPTION-MANAGER-API'],
                                                          sm_api_client_class=cls.sm_api_client_class)

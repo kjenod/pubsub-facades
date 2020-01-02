@@ -35,8 +35,7 @@ from dataclasses import dataclass
 
 from geofencing_service_client.geofencing_service import GeofencingServiceClient
 from geofencing_service_client.models import UASZonesFilter
-from swim_proton.containers import PubSubContainer
-from swim_proton.messaging_handlers import Consumer
+from swim_proton.containers import ConsumerContainer
 
 from pubsub_facades.base import PubSubFacade
 
@@ -48,25 +47,29 @@ class Subscription:
 
 
 class GeofencingSubscriber(PubSubFacade):
-    messaging_handler_class = Consumer
+    container_class = ConsumerContainer
     sm_api_client_class = GeofencingServiceClient
-
-    def __init__(self, container: PubSubContainer, sm_api_client: GeofencingServiceClient):
-        PubSubFacade.__init__(self, container, sm_api_client)
-
-        self.consumer: Consumer = self._container.messaging_handler
 
     @PubSubFacade.require_running
     def subscribe(self, uas_zones_filter: UASZonesFilter, message_consumer: Callable) -> Subscription:
+        """
 
+        :param uas_zones_filter:
+        :param message_consumer:
+        :return:
+        """
         reply = self.sm_api_client.post_subscription(uas_zones_filter=uas_zones_filter)
 
-        self.consumer.attach_message_consumer(reply.publication_location, message_consumer)
+        self.container.consumer.attach_message_consumer(reply.publication_location, message_consumer)
 
         return Subscription(id=reply.subscription_id, queue=reply.publication_location)
 
     @PubSubFacade.require_running
     def pause(self, subscription: Subscription) -> None:
+        """
+
+        :param subscription:
+        """
         update_data = {
             'active': False
         }
@@ -74,6 +77,10 @@ class GeofencingSubscriber(PubSubFacade):
 
     @PubSubFacade.require_running
     def resume(self, subscription: Subscription) -> None:
+        """
+
+        :param subscription:
+        """
         update_data = {
             'active': True
         }
@@ -81,6 +88,10 @@ class GeofencingSubscriber(PubSubFacade):
 
     @PubSubFacade.require_running
     def unsubscribe(self, subscription: Subscription) -> None:
+        """
+
+        :param subscription:
+        """
         self.sm_api_client.delete_subscription_by_id(subscription.id)
 
-        self.consumer.detach_message_consumer(subscription.queue)
+        self.container.consumer.detach_message_consumer(subscription.queue)
