@@ -30,8 +30,7 @@ Details on EUROCONTROL: http://www.eurocontrol.int
 
 __author__ = "EUROCONTROL (SWIM)"
 
-from collections import Callable
-from dataclasses import dataclass
+from collections import Callable, namedtuple
 
 from geofencing_service_client.geofencing_service import GeofencingServiceClient
 from geofencing_service_client.models import UASZonesFilter
@@ -40,10 +39,7 @@ from swim_proton.containers import ConsumerContainer
 from pubsub_facades.base import PubSubFacade
 
 
-@dataclass
-class Subscription:
-    id: str
-    queue: str
+Subscription = namedtuple('Subscription', 'id queue')
 
 
 class GeofencingSubscriber(PubSubFacade):
