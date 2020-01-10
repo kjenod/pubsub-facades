@@ -36,7 +36,7 @@ dependencies:
   - zlib=1.2.11=h7b6447c_3
   - pip:
     - chardet==3.0.4
-    - geofencing-service-client==0.0.10
+    - geofencing-service-client==0.0.11
     - idna==2.8
     - python-qpid-proton==0.30.0
     - requests==2.22.0
