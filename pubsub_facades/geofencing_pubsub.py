@@ -98,4 +98,5 @@ class GeofencingSubscriber(PubSubFacade):
 
         self.gs_client.delete_subscription_by_id(subscription_id)
 
-        self.container.consumer.detach_message_consumer(queue=uas_zone_subscription_reply.publication_location)
+        self.container.consumer.detach_message_consumer(
+            queue=uas_zone_subscription_reply.uas_zone_subscription.publication_location)
