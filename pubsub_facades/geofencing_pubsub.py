@@ -53,6 +53,10 @@ class GeofencingSubscriber(PubSubFacade):
         self.gs_client = self.sm_api_client
 
     @PubSubFacade.require_running
+    def preload_queue_message_consumer(self, queue: str, message_consumer: Callable):
+        self.container.consumer.attach_message_consumer(queue=queue, message_consumer=message_consumer)
+
+    @PubSubFacade.require_running
     def subscribe(self, uas_zones_filter: UASZonesFilter, message_consumer: Callable) -> Subscription:
         """
 

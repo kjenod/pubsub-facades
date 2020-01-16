@@ -44,15 +44,35 @@ class SWIMPublisher(PubSubFacade):
     container_class = ProducerContainer
     sm_api_client_class = SubscriptionManagerClient
 
-    def _get_or_create_sm_topic(self, topic_name: str) -> Topic:
+    def _get_topic_by_name(self, topic_name: str):
         topics = self.sm_api_client.get_topics()
 
         try:
             result = [topic for topic in topics if topic.name == topic_name][0]
         except IndexError:
+            result = None
+
+        return result
+
+    def _get_or_create_sm_topic(self, topic_name: str) -> Topic:
+        result = self._get_topic_by_name(topic_name)
+
+        if result is None:
             result = self.sm_api_client.post_topic(topic=Topic(name=topic_name))
 
         return result
+
+    def preload_topic_message_producer(self,
+                                       topic_name: str,
+                                       message_producer: Callable, interval_in_sec: Optional[int] = None):
+        topic = self._get_topic_by_name(topic_name)
+
+        if topic is None:
+            raise ValueError(f"Topic with name '{topic_name}' not found")
+
+        self.container.producer.add_message_producer(id=topic_name,
+                                                     message_producer=message_producer,
+                                                     interval_in_sec=interval_in_sec)
 
     def add_topic(self, topic_name: str, message_producer: Callable, interval_in_sec: Optional[int] = None) -> Topic:
         """
