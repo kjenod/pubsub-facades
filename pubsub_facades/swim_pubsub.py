@@ -178,8 +178,10 @@ class SWIMSubscriber(PubSubFacade):
         :param subscription:
         :return:
         """
-        subscription.active = False
-        self.sm_api_client.put_subscription(subscription.id, subscription)
+        update_data = {
+            'active': False
+        }
+        subscription = self.sm_api_client.put_subscription(subscription.id, update_data)
 
         return subscription
 
@@ -193,8 +195,10 @@ class SWIMSubscriber(PubSubFacade):
         :param subscription:
         :return:
         """
-        subscription.active = True
-        self.sm_api_client.put_subscription(subscription.id, subscription)
+        update_data = {
+            'active': True
+        }
+        subscription = self.sm_api_client.put_subscription(subscription.id, update_data)
 
         return subscription
 
