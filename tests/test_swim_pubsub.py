@@ -48,6 +48,17 @@ def test_swimpublisher__publish_topic_requires_running():
     assert "Action cannot complete because container has not been started yet" == str(e.value)
 
 
+def test_swimsubscriber__preload_queue_message_consumer_requires_running():
+    container = Mock()
+    container.is_running = Mock(return_value=False)
+    sm_api_client = Mock()
+    swim_subscriber = SWIMSubscriber(container, sm_api_client)
+
+    with pytest.raises(RuntimeError) as e:
+        swim_subscriber.preload_queue_message_consumer(queue='queue', message_consumer=Mock())
+    assert "Action cannot complete because container has not been started yet" == str(e.value)
+
+
 def test_swimsubscriber__subscribe_requires_running():
     container = Mock()
     container.is_running = Mock(return_value=False)

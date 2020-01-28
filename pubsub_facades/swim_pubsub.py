@@ -146,6 +146,19 @@ class SWIMSubscriber(PubSubFacade):
     sm_api_client_class = SubscriptionManagerClient
 
     @PubSubFacade.require_running
+    def preload_queue_message_consumer(self, queue: str, message_consumer: Callable):
+        """
+        Registers the message consumer on an existing queue.
+
+        To be used upon initialization of a subscriber service in case the subscriptions already exist in
+        SubscriptionManager DB. That way the broker will stay up to date as well.
+
+        :param queue:
+        :param message_consumer:
+        """
+        self.container.consumer.attach_message_consumer(queue=queue, message_consumer=message_consumer)
+
+    @PubSubFacade.require_running
     def subscribe(self, topic_name: str, message_consumer: Callable) -> Subscription:
         """
         Creates a new subscription in Subscription Manager and registers the message consumer on a new AMQP1.0 receiver
