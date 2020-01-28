@@ -83,7 +83,7 @@ import proton
 from pubsub_facades.swim_pubsub import SWIMSubscriber
 from subscription_manager_client.models import Subscription
 
-# a message_consumer is supposed to accept a protonMessage parameter where the incoming message will be passed
+# a message_consumer is supposed to accept a proton.Message parameter where the incoming message will be passed
 def message_consumer(message: proton.Message):
     return message.body
 
@@ -113,12 +113,31 @@ management API. There it can create/update/delete subscriptions and register spe
 used to process the incoming messages. Here is a typical example:
 
 ```python
-import random
-
 import proton
 from pubsub_facades.geofencing_pubsub import GeofencingSubscriber, Subscription
 
-# a message_consumer is supposed to accept a protonMessage parameter where the incoming message will be passed
+uas_zones_filter = {
+    'airspaceVolume': {
+        'polygon': [
+            {'LAT': 50.901767, 'LON': 4.371125}, 
+            {'LAT': 50.866953, 'LON': 4.22433}, 
+            {'LAT': 50.788595, 'LON': 4.342881}, 
+            {'LAT': 50.84643, 'LON': 4.535647}, 
+            {'LAT': 50.901767, 'LON': 4.371125}
+        ], 
+        'lowerLimit': 0, 
+        'upperLimit': 100000, 
+        'lowerVerticalReference': 'WGS84', 
+        'upperVerticalReference': 'WGS84'
+    }, 
+    'startDateTime': '2020-01-01T00:00:00+01:00', 
+    'endDateTime': '2021-01-01T00:00:00+01:00', 
+    'regions': [1], 
+    'requestID': '1'
+}
+
+
+# a message_consumer is supposed to accept a proton.Message parameter where the incoming message will be passed
 def message_consumer(message: proton.Message):
     return message.body
 
@@ -127,17 +146,17 @@ subscriber = GeofencingSubscriber.create_from_config('/path/to/config_file.yml')
 # the subscriber container is started in threaded mode in order to be able to add message consumers afterwards
 subscriber.run(threaded=True)
 
-# a new subscription is added in SubscriptionManager and the message_consumer will be associated with the generated 
-# broker queue
-subscription: Subscription = subscriber.subscribe(topic_name='topic1', message_consumer=message_consumer)
+# a new subscription is added in GeofencingService based on the provided filter and the message_consumer will be 
+# associated with the generated broker queue
+subscription: Subscription = subscriber.subscribe(uas_zones_filter=uas_zones_filter, message_consumer=message_consumer)
 
-# the subscription is deactivated in the Subscription Manager and the corresponding queue will stop receiving messages
+# the subscription is deactivated in the GeofencingService and the corresponding queue will stop receiving messages
 subscriber.pause(subscription.id)
 
-# the subscription is reactivated in the Subscription Manager and the corresponding queue will start receiving messages
+# the subscription is reactivated in the GeofencingService and the corresponding queue will start receiving messages
 # again
 subscriber.resume(subscription.id)
 
-# the subscription is deleted in the Subscription Manager and the corresponding queue will be deleted in the broker
+# the subscription is deleted in the GeofencingService and the corresponding queue will be deleted in the broker
 subscriber.unsubscribe(subscription.id)
 ```
