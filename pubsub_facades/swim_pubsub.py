@@ -41,10 +41,23 @@ from pubsub_facades.base import PubSubFacade
 
 
 class SWIMPublisher(PubSubFacade):
+    """ Encapsulates the communication between the SubscriptionManager https://github.com/eurocontrol-swim/subscription-manager
+        and the broker (RabbitMQ) in a single interface by providing publisher related functionalities.
+    """
+
+    """ Is used to instantiate the underlying producer container that interacts with the broker (AMQP1.0 via swim-qpid-proton)"""
     container_class = ProducerContainer
+
+    """ Is used to interact with the subscription management API of 
+        https://github.com/eurocontrol-swim/subscription-manager"""
     sm_api_client_class = SubscriptionManagerClient
 
-    def _get_topic_by_name(self, topic_name: str):
+    def _get_topic_by_name(self, topic_name: str) -> Optional[Topic]:
+        """
+        Retrieves a SubscriptionManager Topic object by its name
+        :param topic_name:
+        :return:
+        """
         topics = self.sm_api_client.get_topics()
 
         try:
@@ -55,6 +68,12 @@ class SWIMPublisher(PubSubFacade):
         return result
 
     def _get_or_create_sm_topic(self, topic_name: str) -> Topic:
+        """
+        Retrieves a SubscriptionManager Topic or creates it if it does not exist.
+
+        :param topic_name:
+        :return:
+        """
         result = self._get_topic_by_name(topic_name)
 
         if result is None:
@@ -65,6 +84,16 @@ class SWIMPublisher(PubSubFacade):
     def preload_topic_message_producer(self,
                                        topic_name: str,
                                        message_producer: Callable, interval_in_sec: Optional[int] = None):
+        """
+        Registers the message producer on an existing topic.
+
+        To be used upon initialization of a publisher service in case the topics already exist in SubscriptionManager DB
+        That way the broker will stay up to date as well.
+
+        :param topic_name:
+        :param message_producer:
+        :param interval_in_sec:
+        """
         topic = self._get_topic_by_name(topic_name)
 
         if topic is None:
@@ -76,6 +105,8 @@ class SWIMPublisher(PubSubFacade):
 
     def add_topic(self, topic_name: str, message_producer: Callable, interval_in_sec: Optional[int] = None) -> Topic:
         """
+        Adds a new topic in SubscriptionManager and registers the message_producer in order to be used for message
+        sending in the broker.
 
         :param topic_name:
         :param message_producer:
@@ -92,7 +123,10 @@ class SWIMPublisher(PubSubFacade):
     @PubSubFacade.require_running
     def publish_topic(self, topic_name: str, context: Optional[Any] = None):
         """
+        Triggers the topic send on demand by providing optional context that will be used in producing the message to
+        be send in the broker.
 
+        :rtype: object
         :param context:
         :param topic_name:
         """
@@ -100,12 +134,22 @@ class SWIMPublisher(PubSubFacade):
 
 
 class SWIMSubscriber(PubSubFacade):
+    """ Encapsulates the communication between the SubscriptionManager https://github.com/eurocontrol-swim/subscription-manager
+        and the broker (RabbitMQ) in a single interface by providing subscriber related functionalities.
+    """
+
+    """ Is used to instantiate the underlying consumer container that interacts with the broker (AMQP1.0 via swim-qpid-proton)"""
     container_class = ConsumerContainer
+
+    """ Is used to interact with the subscription management API of 
+        https://github.com/eurocontrol-swim/subscription-manager"""
     sm_api_client_class = SubscriptionManagerClient
 
     @PubSubFacade.require_running
     def subscribe(self, topic_name: str, message_consumer: Callable) -> Subscription:
         """
+        Creates a new subscription in Subscription Manager and registers the message consumer on a new AMQP1.0 receiver
+        to be used upon message reception
 
         :param topic_name:
         :param message_consumer:
@@ -127,6 +171,9 @@ class SWIMSubscriber(PubSubFacade):
     @PubSubFacade.require_running
     def pause(self, subscription: Subscription) -> Subscription:
         """
+        Updates (deactivates) the subscription's state by setting it to False in Subscription Manager.
+        Upon successful action the corresponding queue will be unbound from the relative topic and no message will be
+        arriving.
 
         :param subscription:
         :return:
@@ -139,6 +186,9 @@ class SWIMSubscriber(PubSubFacade):
     @PubSubFacade.require_running
     def resume(self, subscription: Subscription) -> Subscription:
         """
+        Updates (reactivates) the subscription's state by setting it to True in Subscription Manager.
+        Upon successful action the corresponding queue will be rebound to the relative topic and messages will start
+        arriving again.
 
         :param subscription:
         :return:
@@ -151,6 +201,8 @@ class SWIMSubscriber(PubSubFacade):
     @PubSubFacade.require_running
     def unsubscribe(self, subscription: Subscription) -> None:
         """
+        Deletes the subscription from the Subscription Manager, cleans up the corresponding queue in broker and removes
+        the registered receiver.
 
         :param subscription:
         """

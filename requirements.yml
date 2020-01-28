@@ -4,6 +4,7 @@ dependencies:
   - pytest
   - pytest-cov
   - pyyaml
+  - python-dateutil
   - pip:
     - python-qpid_proton
     - git+https://git@github.com/eurocontrol-swim/swim-qpid-proton.git

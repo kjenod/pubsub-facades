@@ -43,22 +43,41 @@ Subscription = namedtuple('Subscription', 'id queue')
 
 
 class GeofencingSubscriber(PubSubFacade):
+    """ Encapsulates the communication between the Geofencing Service https://github.com/eurocontrol-swim/geofencing-service
+        and the broker (RabbitMQ) in a single interface by providing subscriber related functionalities.
+    """
+
+    """ Is used to instantiate the underlying consumer container that interacts with the broker (AMQP1.0 via swim-qpid-proton)"""
     container_class = ConsumerContainer
+
+    """ Is used to interact with the subscription management API of 
+        https://github.com/eurocontrol-swim/geofencing-servicer"""
     sm_api_client_class = GeofencingServiceClient
 
     def __init__(self, container: PubSubContainer, sm_api_client):
         super().__init__(container, sm_api_client)
 
-        # alias
+        """Alias to avoid confusion with Subscription Manager API"""
         self.gs_client = self.sm_api_client
 
     @PubSubFacade.require_running
     def preload_queue_message_consumer(self, queue: str, message_consumer: Callable):
+        """
+        Registers the message consumer on an existing queue.
+
+        To be used upon initialization of a subscriber service in case the subscriptions already exist in
+        GeofencingService DB. That way the broker will stay up to date as well.
+
+        :param queue:
+        :param message_consumer:
+        """
         self.container.consumer.attach_message_consumer(queue=queue, message_consumer=message_consumer)
 
     @PubSubFacade.require_running
     def subscribe(self, uas_zones_filter: UASZonesFilter, message_consumer: Callable) -> Subscription:
         """
+        Creates a new subscription in Geofencing Service and registers the message consumer on a new AMQP1.0 receiver
+        to be used upon message reception
 
         :param uas_zones_filter:
         :param message_consumer:
@@ -73,6 +92,9 @@ class GeofencingSubscriber(PubSubFacade):
     @PubSubFacade.require_running
     def pause(self, subscription_id: str) -> None:
         """
+        Updates (deactivates) the subscription's state by setting it to False in Geofencing Service.
+        Upon successful action the corresponding queue will be unbound from the relative topic and no message will be
+        arriving.
 
         :param subscription_id:
         """
@@ -84,6 +106,9 @@ class GeofencingSubscriber(PubSubFacade):
     @PubSubFacade.require_running
     def resume(self, subscription_id: str) -> None:
         """
+        Updates (reactivates) the subscription's state by setting it to True in Geofencing Service.
+        Upon successful action the corresponding queue will be rebound to the relative topic and messages will start
+        arriving again.
 
         :param subscription_id:
         """
@@ -95,6 +120,8 @@ class GeofencingSubscriber(PubSubFacade):
     @PubSubFacade.require_running
     def unsubscribe(self, subscription_id: str) -> None:
         """
+        Deletes the subscription from the Geofencing Service, cleans up the corresponding queue in broker and removes
+        the registered receiver.
 
         :param subscription_id:
         """

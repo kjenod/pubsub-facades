@@ -32,9 +32,11 @@ __author__ = "EUROCONTROL (SWIM)"
 
 from functools import wraps
 import logging.config
+from typing import Type
 
 import yaml
 from rest_client.errors import APIError
+from rest_client.typing import RestClient
 from swim_proton.containers import PubSubContainer
 
 from pubsub_facades import ConfigDict
@@ -55,7 +57,12 @@ def yaml_file_to_dict(filename: str) -> ConfigDict:
     return obj or None
 
 
-def sm_client_api_is_authenticated(sm_api_client):
+def sm_client_api_is_authenticated(sm_api_client: RestClient) -> bool:
+    """
+    Indicates whether the API client is authenticated. The client should provide a ping_credentials method.
+    :param sm_api_client:
+    :return:
+    """
     try:
         sm_api_client.ping_credentials()
     except APIError as e:
@@ -65,7 +72,13 @@ def sm_client_api_is_authenticated(sm_api_client):
     return True
 
 
-def create_sm_api_client_from_config(config: ConfigDict, sm_api_client_class):
+def create_sm_api_client_from_config(config: ConfigDict, sm_api_client_class: Type[RestClient]) -> RestClient:
+    """
+    Factory method that creates an instance of an API client. The client should provide
+    :param config:
+    :param sm_api_client_class:
+    :return:
+    """
     return sm_api_client_class.create(
         host=config['host'],
         https=config['https'],
@@ -77,21 +90,41 @@ def create_sm_api_client_from_config(config: ConfigDict, sm_api_client_class):
 
 
 class PubSubFacade:
-    container_class = None
-    sm_api_client_class = None
 
-    def __init__(self, container: PubSubContainer, sm_api_client):
+    """ Is used to instantiate the underlying container that interacts with the broker (AMQP1.0 via swim-qpid-proton)"""
+    container_class: Type[PubSubContainer] = None
+
+    """ Is used to interact with any subscription management api """
+    sm_api_client_class: Type[RestClient] = None
+
+    def __init__(self, container: PubSubContainer, sm_api_client: RestClient):
+        """
+
+        :param container:
+        :param sm_api_client: a REST API client that interacts with a subscription management service
+        """
         self.container = container
         self.sm_api_client = sm_api_client
 
         if not sm_client_api_is_authenticated(self.sm_api_client):
             raise ValueError("Invalid credentials")
 
-    def run(self, threaded=False):
+    def run(self, threaded=False) -> None:
+        """
+        Runs the underlying container. The threaded mode is intended for the container in order to enable further usage
+        of the underlying messaging_handler.
+        :param threaded:
+        """
         self.container.run(threaded=threaded)
 
     @classmethod
     def require_running(cls, f):
+        """
+        Decorator to be used in methods of classes that derive from PubSubFacade. It prevents them from running in case
+        the underlying container has not started yet.
+        :param f:
+        :return:
+        """
         @wraps(f)
         def decorator(*args, **kwargs):
             self = args[0]
@@ -102,6 +135,11 @@ class PubSubFacade:
 
     @classmethod
     def create_from_config(cls, config_file: str):
+        """
+        Factory method to create the PubSubFacade
+        :param config_file:
+        :return: PubSubFacade
+        """
         config = yaml_file_to_dict(config_file)
 
         container = cls.container_class.create_from_config(config['BROKER'])
