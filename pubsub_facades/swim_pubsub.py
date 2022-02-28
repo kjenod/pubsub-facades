@@ -36,6 +36,7 @@ from typing import Optional, List, Any
 from subscription_manager_client.subscription_manager import SubscriptionManagerClient
 from subscription_manager_client.models import Topic, Subscription
 from swim_proton.containers import ProducerContainer, ConsumerContainer
+from swim_proton.messaging_handlers import Messenger
 
 from pubsub_facades.base import PubSubFacade
 
@@ -81,56 +82,46 @@ class SWIMPublisher(PubSubFacade):
 
         return result
 
-    def preload_topic_message_producer(self,
-                                       topic_name: str,
-                                       message_producer: Callable, interval_in_sec: Optional[int] = None):
+    def pre_schedule_messenger(self, messenger: Messenger):
         """
         Registers the message producer on an existing topic.
 
         To be used upon initialization of a publisher service in case the topics already exist in SubscriptionManager DB
         That way the broker will stay up to date as well.
 
-        :param topic_name:
-        :param message_producer:
-        :param interval_in_sec:
+        :param messenger:
         """
-        topic = self._get_topic_by_name(topic_name)
+        topic = self._get_topic_by_name(messenger.id)
 
         if topic is None:
-            raise ValueError(f"Topic with name '{topic_name}' not found")
+            raise ValueError(f"Topic with name '{messenger.id}' not found")
 
-        self.container.producer.add_message_producer(id=topic_name,
-                                                     message_producer=message_producer,
-                                                     interval_in_sec=interval_in_sec)
+        self.container.producer.schedule_messenger(messenger)
 
-    def add_topic(self, topic_name: str, message_producer: Callable, interval_in_sec: Optional[int] = None) -> Topic:
+    def add_topic_messenger(self, messenger: Messenger) -> Topic:
         """
         Adds a new topic in SubscriptionManager and registers the message_producer in order to be used for message
         sending in the broker.
 
-        :param topic_name:
-        :param message_producer:
-        :param interval_in_sec:
+        :param messenger:
         :return:
         """
-        topic = self._get_or_create_sm_topic(topic_name)
+        topic = self._get_or_create_sm_topic(messenger.id)
 
-        self.container.producer.add_message_producer(id=topic_name,
-                                                     message_producer=message_producer,
-                                                     interval_in_sec=interval_in_sec)
+        self.container.producer.schedule_messenger(messenger)
+
         return topic
 
     @PubSubFacade.require_running
-    def publish_topic(self, topic_name: str, context: Optional[Any] = None):
+    def publish_topic_messenger(self, messenger: Messenger, context: Optional[Any] = None):
         """
         Triggers the topic send on demand by providing optional context that will be used in producing the message to
         be send in the broker.
 
-        :rtype: object
+        :param messenger:
         :param context:
-        :param topic_name:
         """
-        self.container.producer.trigger_message_producer(message_producer_id=topic_name, context=context)
+        self.container.producer.trigger_messenger(messenger, context=context)
 
 
 class SWIMSubscriber(PubSubFacade):

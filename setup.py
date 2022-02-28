@@ -33,7 +33,7 @@ __author__ = 'EUROCONTROL (SWIM)'
 
 setup(
     name='pubsub-facades',
-    version='0.0.3',
+    version='0.1.0',
     description='Pub/Sub facade implementations',
     author='EUROCONTROL (SWIM)',
     author_email='',
