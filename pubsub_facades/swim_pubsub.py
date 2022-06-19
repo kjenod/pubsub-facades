@@ -30,7 +30,7 @@ Details on EUROCONTROL: http://www.eurocontrol.int
 
 __author__ = "EUROCONTROL (SWIM)"
 
-from collections import Callable
+from collections.abc import Callable
 from typing import Optional, List, Any
 
 from subscription_manager_client.subscription_manager import SubscriptionManagerClient
