@@ -28,9 +28,9 @@ LOGGING:
 
 BROKER:
   host: '0.0.0.0:5671'
-  cert_db: '/home/kjeno/SWIM-TI-YP-prototype/secrets/rabbitmq/ca_certificate.pem'
-  cert_file: '/home/kjeno/SWIM-TI-YP-prototype/secrets/rabbitmq/client/client_certificate.pem'
-  cert_key: '/home/kjeno/SWIM-TI-YP-prototype/secrets/rabbitmq/client/client_key.pem'
+  cert_db: '/SWIM-TI-YP-prototype/secrets/rabbitmq/ca_certificate.pem'
+  cert_file: '/SWIM-TI-YP-prototype/secrets/rabbitmq/client/client_certificate.pem'
+  cert_key: '/SWIM-TI-YP-prototype/secrets/rabbitmq/client/client_key.pem'
   cert_password: 'swim-ti'
 
 SUBSCRIPTION-MANAGER-API:
